@@ -162,6 +162,17 @@ SELECT 'GOLD (Pre-aggregated):' AS layer,
        'Fastest - Pre-computed metrics, minimal computation needed' AS characteristics;
 
 SELECT '';
+SELECT '=== GOLD TABLE KPIs EXPLAINED ===' AS kpi_section;
+SELECT 'The ch_gold_order_metrics table contains pre-aggregated Key Performance Indicators:' AS info;
+SELECT '  - order_month: Month of the order' AS kpi;
+SELECT '  - status: Order status (pending, confirmed, shipped, delivered, cancelled)' AS kpi;
+SELECT '  - user_count: Number of unique customers (uniqExact)' AS kpi;
+SELECT '  - order_count: Total number of orders' AS kpi;
+SELECT '  - gross_revenue: Total revenue (sum of total_amount)' AS kpi;
+SELECT '  - avg_order_value: Average order value (gross_revenue / order_count)' AS kpi;
+SELECT 'These KPIs are pre-computed from the silver layer, enabling instant dashboard queries.' AS note;
+
+SELECT '';
 SELECT '=== RECOMMENDATIONS ===' AS recommendations;
 SELECT '1. Use RAW Iceberg for: Ad-hoc exploration, schema evolution, time travel queries' AS tip;
 SELECT '2. Use SILVER for: Frequent analytical queries, real-time dashboards, complex joins' AS tip;

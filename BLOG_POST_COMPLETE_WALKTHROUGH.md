@@ -363,21 +363,41 @@ While the Iceberg tables remain the raw “bronze” layer, ClickHouse can host 
 2. Why this matters:
    * Raw Iceberg scans prove that ClickHouse can read OLake-managed data directly, but the query has to parse Iceberg metadata and pull Parquet files over the network.
    * Silver/Gold tables live inside ClickHouse storage, so repeat queries hit local columnar data and return in milliseconds.
-3. Compare the layers:
+3. **What are the KPIs in the Gold table?**
+
+The `ch_gold_order_metrics` table contains pre-aggregated Key Performance Indicators (KPIs) per month and status:
+- **`order_month`**: Month of the order (Date)
+- **`status`**: Order status (pending, confirmed, shipped, delivered, cancelled)
+- **`user_count`**: Number of unique customers (using `uniqExact`)
+- **`order_count`**: Total number of orders
+- **`gross_revenue`**: Total revenue (sum of `total_amount`)
+- **`avg_order_value`**: Average order value (gross_revenue / order_count)
+
+These KPIs are pre-computed from the silver layer, enabling instant dashboard queries without recalculating aggregations.
+
+4. **Compare the layers with example queries:**
 
 ```sql
--- Raw Iceberg (OLake managed)
+-- Raw Iceberg (OLake managed) - Queries MinIO via REST API
+-- Expected: 2-5 seconds for 10,000+ orders
 SELECT status, COUNT(*) AS orders, AVG(total_amount) AS avg_value
 FROM iceberg_orders_lakehouse GROUP BY status;
 
--- Silver (ClickHouse MergeTree copy)
+-- Silver (ClickHouse MergeTree copy) - Local optimized storage
+-- Expected: 50-200 milliseconds for 10,000+ orders
 SELECT status, COUNT(*) AS orders, AVG(total_amount) AS avg_value
 FROM ch_silver_orders GROUP BY status;
 
--- Gold (pre-aggregated KPIs)
+-- Gold (pre-aggregated KPIs) - Pre-computed metrics
+-- Expected: 10-50 milliseconds (fastest, no computation needed)
 SELECT status, SUM(order_count) AS orders, AVG(avg_order_value) AS avg_value
 FROM ch_gold_order_metrics GROUP BY status;
 ```
+
+**Performance expectations with 10,000+ orders:**
+- **Raw Iceberg**: 2-5 seconds (network I/O, Parquet parsing, REST API overhead)
+- **Silver**: 50-200 milliseconds (local columnar storage, optimized format)
+- **Gold**: 10-50 milliseconds (pre-aggregated, minimal computation)
 
 Run the script again whenever OLake lands new data and you want to refresh the ClickHouse-managed tiers:
 
@@ -398,20 +418,55 @@ Run the demonstration queries to compare the raw Iceberg tables (queried via the
 docker exec -it clickhouse-client clickhouse-client --host clickhouse --queries-file /scripts/cross-database-analytics.sql
 ```
 
-**Comprehensive performance comparison:**
+**Comprehensive performance comparison with timing:**
 
-For a detailed performance analysis with timing information, use the dedicated performance comparison script:
+For a detailed performance analysis, use the dedicated performance comparison script that runs the same queries against all three layers:
 
 ```bash
 docker exec -i clickhouse-server clickhouse-client < scripts/compare-query-performance.sql
 ```
 
-This script runs the same queries against all three layers (raw Iceberg, silver, gold) and demonstrates:
-- **Query speed differences** - See how much faster silver/gold tables are
+This script demonstrates:
+- **Query speed differences** - Same queries run against raw, silver, and gold layers
+- **Multiple query patterns** - Simple aggregations, time-based queries, complex filtering, distinct counts
+- **KPI explanations** - What metrics are pre-computed in the gold table
 - **Use case recommendations** - When to use each layer
-- **Multiple query patterns** - Aggregations, time-based queries, complex filtering, distinct counts
 
-**Tip:** For meaningful performance differences, generate more data first using `./scripts/generate-more-data.sh`. With only ~30 orders, all queries will be fast. With 10,000+ orders, you'll see significant differences (raw Iceberg: seconds, silver: milliseconds, gold: milliseconds).
+**To see actual query execution times**, use the timing script:
+
+```bash
+# Run performance comparison with actual timing
+./scripts/performance-with-timing.sh
+```
+
+This script uses the `time` command to show real execution times for the same query against all three layers.
+
+**Or manually with ClickHouse timing:**
+
+```bash
+# Raw Iceberg
+docker exec -it clickhouse-client clickhouse-client --host clickhouse --query "
+SELECT status, COUNT(*) AS orders, ROUND(AVG(total_amount), 2) AS avg_value
+FROM iceberg_orders_lakehouse GROUP BY status
+" --format=Pretty --time
+
+# Silver
+docker exec -it clickhouse-client clickhouse-client --host clickhouse --query "
+SELECT status, COUNT(*) AS orders, ROUND(AVG(total_amount), 2) AS avg_value
+FROM ch_silver_orders GROUP BY status
+" --format=Pretty --time
+
+# Gold
+docker exec -it clickhouse-client clickhouse-client --host clickhouse --query "
+SELECT status, SUM(order_count) AS orders, ROUND(AVG(avg_order_value), 2) AS avg_value
+FROM ch_gold_order_metrics GROUP BY status
+" --format=Pretty --time
+```
+
+**Expected performance with 10,000+ orders:**
+- **Raw Iceberg**: 2-5 seconds (network I/O, Parquet parsing, REST API overhead)
+- **Silver**: 50-200 milliseconds (local columnar storage, optimized format)
+- **Gold**: 10-50 milliseconds (pre-aggregated, minimal computation)
 
 Highlights inside the script:
 
