@@ -1,16 +1,6 @@
--- MySQL User Permissions Setup for ClickHouse and OLake Integration
--- This script creates necessary users and permissions for integrations
-
--- Create ClickHouse integration user
-CREATE USER IF NOT EXISTS 'clickhouse'@'%' IDENTIFIED BY 'clickhouse_pass';
-
--- Grant necessary privileges for ClickHouse to read MySQL data
-GRANT SELECT ON demo_db.* TO 'clickhouse'@'%';
-GRANT SHOW DATABASES ON *.* TO 'clickhouse'@'%';
-GRANT SHOW VIEW ON demo_db.* TO 'clickhouse'@'%';
-
--- Grant privileges for potential future write operations
-GRANT INSERT, UPDATE, DELETE ON demo_db.* TO 'clickhouse'@'%';
+-- MySQL User Permissions Setup for OLake Integration
+-- This script creates necessary users and permissions for OLake CDC operations
+-- Note: ClickHouse queries Iceberg tables via REST catalog, not MySQL directly
 
 -- Create OLake integration user for CDC
 CREATE USER IF NOT EXISTS 'olake'@'%' IDENTIFIED BY 'olake_pass';
@@ -43,7 +33,6 @@ FLUSH PRIVILEGES;
 -- Display created users
 SELECT 'User Permissions Summary' as info;
 
-SELECT 'clickhouse user created for ClickHouse MySQL engine' as status;
 SELECT 'olake user created for CDC operations' as status;
 SELECT 'monitor user created for health checks' as status;
 SELECT 'demo_user created for manual testing' as status;

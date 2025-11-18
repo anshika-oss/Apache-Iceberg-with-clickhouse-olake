@@ -156,10 +156,10 @@ The MySQL container automatically executes:
   * **~10,000 orders** (approximately 10 orders per user)
   * **~5,000 user sessions** (approximately 5 sessions per user)
 * `mysql-init/02-permissions.sql` – creates integration users:
-  * `olake / olake_pass` (CDC + replication privileges).
-  * `clickhouse / clickhouse_pass` (direct query access).
-
-**Note:** The data generation uses stored procedures and may take a few minutes to complete, especially for the orders table. This large dataset is necessary to demonstrate meaningful performance differences between raw Iceberg tables and optimized ClickHouse silver/gold tables.
+  * `olake / olake_pass` (CDC + replication privileges for OLake UI).
+  * `demo_user / demo_password` (for manual testing and inspection).
+  
+**Note:** ClickHouse does not require a MySQL user because it queries Iceberg tables via the REST catalog, not MySQL directly.
 
 Verify counts:
 
@@ -169,13 +169,13 @@ docker exec -it mysql-server mysql -u demo_user -pdemo_password -e "USE demo_db;
 
 ### 📊 Sample Data Overview
 
-The demo includes realistic e-commerce data optimized for performance testing:
+The demo includes realistic e-commerce data:
 
 **Tables:**
-- **users** (1000+ users) - Customer information with demographics
-- **products** (200+ products) - Product catalog across multiple categories
-- **orders** (10,000+ orders) - Purchase history with various statuses
-- **user_sessions** (5,000+ sessions) - User activity tracking
+- **users** (20+ users) - Customer information with demographics
+- **products** (25+ products) - Product catalog across multiple categories
+- **orders** (30+ orders) - Purchase history with various statuses
+- **user_sessions** (15+ sessions) - User activity tracking
 
 **Geographic Distribution:**
 USA, Canada, UK, Germany, France, Spain, Japan, India, Australia, Norway, Brazil, Mexico, Singapore
@@ -231,38 +231,6 @@ docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELE
 docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELECT id, user_id, session_token, login_time, is_active FROM user_sessions LIMIT 5;"
 ```
 
-**Interactive MySQL shell (for more detailed exploration):**
-
-```bash
-docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db
-```
-
-Once inside the MySQL shell, you can run queries like:
-
-```sql
--- Show all tables
-SHOW TABLES;
-
--- Describe table structure
-DESCRIBE users;
-DESCRIBE products;
-DESCRIBE orders;
-DESCRIBE user_sessions;
-
--- Check data distribution
-SELECT status, COUNT(*) FROM users GROUP BY status;
-SELECT category, COUNT(*) FROM products GROUP BY category;
-SELECT status, COUNT(*) FROM orders GROUP BY status;
-
--- View full table contents
-SELECT * FROM users;
-SELECT * FROM products;
-SELECT * FROM orders;
-```
-
-**Exit the MySQL shell:** Type `exit` or press `Ctrl+D`
-
----
 
 Prepare ClickHouse for the Iceberg REST Catalog
 -----------------------------------------------
@@ -443,7 +411,7 @@ This script runs the same queries against all three layers (raw Iceberg, silver,
 - **Use case recommendations** - When to use each layer
 - **Multiple query patterns** - Aggregations, time-based queries, complex filtering, distinct counts
 
-**Tip:** The initial dataset includes 10,000+ orders, which is sufficient to demonstrate significant performance differences (raw Iceberg: seconds, silver: milliseconds, gold: milliseconds).
+**Tip:** For meaningful performance differences, generate more data first using `./scripts/generate-more-data.sh`. With only ~30 orders, all queries will be fast. With 10,000+ orders, you'll see significant differences (raw Iceberg: seconds, silver: milliseconds, gold: milliseconds).
 
 Highlights inside the script:
 
