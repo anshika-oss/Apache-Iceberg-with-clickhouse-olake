@@ -85,8 +85,20 @@ docker-compose up -d
    ```
    Or use interactive MySQL shell: `docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db`
 
-3. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
-4. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
+3. **Generate more data** for performance testing (optional but recommended):
+   ```bash
+   ./scripts/generate-more-data.sh
+   ```
+   This adds ~1000 users, 200 products, ~10,000 orders, and ~5,000 sessions to demonstrate query performance differences.
+
+4. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
+
+5. **Compare query performance** between raw Iceberg and optimized tables:
+   ```bash
+   docker exec -i clickhouse-server clickhouse-client < scripts/compare-query-performance.sql
+   ```
+
+6. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
 
 ## 📊 Sample Data
 

@@ -258,6 +258,47 @@ SELECT * FROM orders;
 
 ---
 
+Generate More Data for Performance Testing
+------------------------------------------
+
+To demonstrate the performance difference between raw Iceberg tables and optimized ClickHouse silver/gold tables, you'll want more data. The initial dataset has ~20 users and ~30 orders, which is too small to show meaningful performance differences.
+
+**Quick way (recommended):**
+
+```bash
+# Generate ~1000 users, 200 products, ~10,000 orders, ~5,000 sessions
+./scripts/generate-more-data.sh
+```
+
+**Manual way:**
+
+```bash
+# Run the SQL script directly
+docker exec -i mysql-server mysql -u demo_user -pdemo_password demo_db < scripts/generate-more-data.sql
+```
+
+This script will:
+- Add **1000+ users** with realistic demographics across 13 countries
+- Add **200+ products** across 9 categories
+- Generate **~10,000 orders** (approximately 10 orders per user)
+- Generate **~5,000 user sessions** (approximately 5 sessions per user)
+
+**After generating more data:**
+
+1. **Re-sync to Iceberg** - Restart or trigger your OLake UI pipeline to sync the new data to MinIO
+2. **Refresh ClickHouse tables** - Re-run the setup script to update silver/gold layers:
+   ```bash
+   docker exec -i clickhouse-server clickhouse-client < scripts/iceberg-setup.sql
+   ```
+3. **Compare performance** - Run the performance comparison script:
+   ```bash
+   docker exec -i clickhouse-server clickhouse-client < scripts/compare-query-performance.sql
+   ```
+
+**Note:** The data generation script uses stored procedures and may take a few minutes to complete, especially for the orders table. Be patient!
+
+---
+
 Prepare ClickHouse for the Iceberg REST Catalog
 -----------------------------------------------
 
@@ -413,14 +454,31 @@ docker exec -it clickhouse-client clickhouse-client --host clickhouse --queries-
 
 ---
 
-Raw vs Optimized Analytics & Time Travel
-----------------------------------------
+Raw vs Optimized Analytics & Performance Comparison
+---------------------------------------------------
 
 Run the demonstration queries to compare the raw Iceberg tables (queried via the REST catalog) with the ClickHouse-managed Silver and Gold layers:
+
+**Quick analytics comparison:**
 
 ```bash
 docker exec -it clickhouse-client clickhouse-client --host clickhouse --queries-file /scripts/cross-database-analytics.sql
 ```
+
+**Comprehensive performance comparison:**
+
+For a detailed performance analysis with timing information, use the dedicated performance comparison script:
+
+```bash
+docker exec -i clickhouse-server clickhouse-client < scripts/compare-query-performance.sql
+```
+
+This script runs the same queries against all three layers (raw Iceberg, silver, gold) and demonstrates:
+- **Query speed differences** - See how much faster silver/gold tables are
+- **Use case recommendations** - When to use each layer
+- **Multiple query patterns** - Aggregations, time-based queries, complex filtering, distinct counts
+
+**Tip:** For meaningful performance differences, generate more data first using `./scripts/generate-more-data.sh`. With only ~30 orders, all queries will be fast. With 10,000+ orders, you'll see significant differences (raw Iceberg: seconds, silver: milliseconds, gold: milliseconds).
 
 Highlights inside the script:
 
