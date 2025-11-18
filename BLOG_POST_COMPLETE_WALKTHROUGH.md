@@ -35,25 +35,47 @@ Architecture at a Glance
 ------------------------
 
 ```
-┌───────────┐  Binlog CDC   ┌────────────┐   Iceberg files   ┌────────────┐
-│  MySQL    │──────────────▶│  OLake UI  │──────────────────▶│  MinIO +   │
-│  (OLTP)   │               │ (pipelines)│                   │ Apache     │
-└───────────┘               └────────────┘                   │ Iceberg    │
-                                                                 │
-                                                                 │
-                                                        ┌────────┴────────┐
-                                                        │ Iceberg REST     │
-                                                        │ Catalog (OLake)  │
-                                                        └────────┬────────┘
-                                                                 │
-                                                          ClickHouse (Iceberg
-                                                          REST + Silver/Gold)
+┌───────────┐  Binlog CDC   ┌────────────┐                    ┌────────────┐
+│  MySQL    │──────────────▶│  OLake UI  │                    │   MinIO    │
+│  (OLTP)   │               │ (pipelines)│                    │            │
+└───────────┘               └────────────┘                    │  ┌─────────┴─────────┐
+                                                                │  │ Raw Iceberg       │
+                                                                │  │ (demo_lakehouse)  │
+                                                                │  └─────────┬─────────┘
+                                                                │            │
+                                                                │  ┌─────────┴─────────┐
+                                                                │  │ Silver Iceberg     │
+                                                                │  │ (demo_lakehouse_   │
+                                                                │  │  silver)           │
+                                                                │  │ Written by CH      │
+                                                                │  └─────────┬─────────┘
+                                                                └────────────┼────────────┘
+                                                                             │
+                                                                    ┌────────┴────────┐
+                                                                    │ Iceberg REST     │
+                                                                    │ Catalog (OLake)  │
+                                                                    └────────┬────────┘
+                                                                             │
+                                                                    ┌────────┴────────┐
+                                                                    │   ClickHouse     │
+                                                                    │                  │
+                                                                    │  ┌─────────────┐ │
+                                                                    │  │ Gold Tables │ │
+                                                                    │  │ (MergeTree) │ │
+                                                                    │  │ Local Store │ │
+                                                                    │  └─────────────┘ │
+                                                                    └──────────────────┘
 ```
+
+**Data Flow:**
+1. **MySQL** → **OLake UI** (CDC via binlog) → **Raw Iceberg tables** in MinIO (`demo_lakehouse` namespace)
+2. **ClickHouse** reads raw Iceberg via REST catalog and writes **Silver Iceberg tables** to MinIO (`demo_lakehouse_silver` namespace, optimized)
+3. **ClickHouse** creates **Gold tables** (pre-aggregated KPIs) in local storage for fastest queries
 
 * **MySQL 8.0** – Operational workload with realistic sample data, GTID + binlog enabled for CDC.
 * **OLake UI** – Low-code interface for defining CDC pipelines that output Iceberg tables.
-* **MinIO** – S3-compatible object store acting as the Iceberg warehouse.
-* **ClickHouse** – Queries Iceberg data via the IcebergS3 engine.
+* **MinIO** – S3-compatible object store acting as the Iceberg warehouse (stores both raw and silver Iceberg tables).
+* **ClickHouse** – Queries Iceberg data via REST catalog, writes optimized Silver Iceberg tables to MinIO, and maintains Gold tables in local storage.
 
 ---
 
@@ -172,10 +194,10 @@ docker exec -it mysql-server mysql -u demo_user -pdemo_password -e "USE demo_db;
 The demo includes realistic e-commerce data:
 
 **Tables:**
-- **users** (20+ users) - Customer information with demographics
-- **products** (25+ products) - Product catalog across multiple categories
-- **orders** (30+ orders) - Purchase history with various statuses
-- **user_sessions** (15+ sessions) - User activity tracking
+- **users** (1000+ users) - Customer information with demographics
+- **products** (200+ products) - Product catalog across multiple categories
+- **orders** (10,000+ orders) - Purchase history with various statuses
+- **user_sessions** (5,000+ sessions) - User activity tracking
 
 **Geographic Distribution:**
 USA, Canada, UK, Germany, France, Spain, Japan, India, Australia, Norway, Brazil, Mexico, Singapore
@@ -507,7 +529,7 @@ GROUP BY status;
 SELECT status,
        COUNT(*) AS silver_orders,
        AVG(total_amount) AS silver_avg_value
-FROM ch_silver_orders
+FROM iceberg_silver_orders
 GROUP BY status;
 ```
 

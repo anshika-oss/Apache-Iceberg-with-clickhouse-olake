@@ -7,12 +7,16 @@ A comprehensive Docker-based development environment that ingests data from MySQ
 ```mermaid
 graph TD
     A[MySQL Database] -->|CDC via OLake UI| B[OLake Pipelines]
-    B -->|Iceberg Writers| D[Apache Iceberg on MinIO]
-    C[ClickHouse] -->|Iceberg REST Catalog| D
-    D -->|Snapshots| C
+    B -->|Iceberg Writers| D1[Raw Iceberg Tables<br/>MinIO: demo_lakehouse]
+    C[ClickHouse] -->|Reads via REST Catalog| D1
+    C -->|Writes Optimized| D2[Silver Iceberg Tables<br/>MinIO: demo_lakehouse_silver]
+    C -->|Creates| D3[Gold Tables<br/>ClickHouse Local Storage]
+    D1 -->|Queries| C
+    D2 -->|Queries| C
+    D3 -->|Queries| C
     E[Analytics Queries] --> C
-    F[Time Travel Queries] --> D
-    G[Schema Evolution] --> D
+    F[Time Travel Queries] --> D1
+    G[Schema Evolution] --> D1
     
     subgraph "Data Sources"
         A
@@ -23,8 +27,13 @@ graph TD
         C
     end
     
-    subgraph "Storage Layer"
-        D
+    subgraph "Storage Layer - MinIO"
+        D1
+        D2
+    end
+    
+    subgraph "Storage Layer - ClickHouse"
+        D3
     end
     
     subgraph "Analytics Layer"
@@ -39,7 +48,10 @@ graph TD
 ### Core Features
 - **ClickHouse Experimental Iceberg Support** - Query Iceberg tables through the REST catalog interface
 - **Real-time CDC Pipeline** - MySQL → OLake → Iceberg with change data capture
-- **Silver/Gold Acceleration** - Materialize ClickHouse-optimized tables on top of raw Iceberg data
+- **Three-Layer Architecture**:
+  - **Raw Iceberg** (MinIO) - Unoptimized tables from OLake
+  - **Silver Iceberg** (MinIO) - ClickHouse-written optimized Iceberg tables
+  - **Gold Tables** (ClickHouse) - Pre-aggregated KPIs in local storage
 - **Schema Evolution** - Add columns and modify schemas without data loss
 - **Time Travel Queries** - Query historical data states
 - **Partition Pruning** - Optimized query performance with intelligent partitioning
@@ -84,17 +96,9 @@ docker-compose up -d
    ./scripts/inspect-mysql-data.sh
    ```
    Or use interactive MySQL shell: `docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db`
-   
-   **Note:** The MySQL initialization automatically generates ~1000 users, 200 products, ~10,000 orders, and ~5,000 sessions for performance testing. This may take a few minutes.
 
 3. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
-
-4. **Compare query performance** between raw Iceberg and optimized tables:
-   ```bash
-   docker exec -i clickhouse-server clickhouse-client < scripts/compare-query-performance.sql
-   ```
-
-5. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
+4. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
 
 ## 📊 Sample Data
 
