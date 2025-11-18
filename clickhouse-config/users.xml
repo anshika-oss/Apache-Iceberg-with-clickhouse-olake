@@ -8,7 +8,6 @@
             </networks>
             <profile>default</profile>
             <quota>default</quota>
-            <access_management>1</access_management>
         </default>
         
         <demo_user>
@@ -18,7 +17,6 @@
             </networks>
             <profile>default</profile>
             <quota>default</quota>
-            <access_management>1</access_management>
         </demo_user>
     </users>
     
@@ -28,43 +26,8 @@
             <max_bytes_before_external_group_by>20000000000</max_bytes_before_external_group_by>
             <max_bytes_before_external_sort>20000000000</max_bytes_before_external_sort>
             <use_uncompressed_cache>0</use_uncompressed_cache>
-            <load_balancing>random</load_balancing>
-            <max_query_size>268435456</max_query_size>
-            <max_ast_depth>1000</max_ast_depth>
-            <max_ast_elements>50000</max_ast_elements>
-            <max_expanded_ast_elements>500000</max_expanded_ast_elements>
             <readonly>0</readonly>
-            <max_rows_in_set>0</max_rows_in_set>
-            <max_bytes_in_set>0</max_bytes_in_set>
-            <max_rows_in_join>0</max_rows_in_join>
-            <max_bytes_in_join>0</max_bytes_in_join>
-            <max_rows_to_sort>0</max_rows_to_sort>
-            <max_bytes_to_sort>0</max_bytes_to_sort>
-            <max_result_rows>0</max_result_rows>
-            <max_result_bytes>0</max_result_bytes>
-            <result_overflow_mode>break</result_overflow_mode>
-            <max_execution_time>0</max_execution_time>
-            <min_execution_speed>0</min_execution_speed>
-            <timeout_before_checking_execution_speed>10</timeout_before_checking_execution_speed>
-            <max_columns_to_read>0</max_columns_to_read>
-            <max_temporary_columns>0</max_temporary_columns>
-            <max_temporary_non_const_columns>0</max_temporary_non_const_columns>
-            <max_subquery_depth>100</max_subquery_depth>
-            <max_pipeline_depth>1000</max_pipeline_depth>
             <max_threads>0</max_threads>
-            <max_insert_threads>0</max_insert_threads>
-            <min_insert_block_size_rows>0</min_insert_block_size_rows>
-            <min_insert_block_size_bytes>0</min_insert_block_size_bytes>
-            <max_replica_delay_for_distributed_queries>300</max_replica_delay_for_distributed_queries>
-            <prefer_localhost_replica>1</prefer_localhost_replica>
-            <parallel_replicas_count>0</parallel_replicas_count>
-            <parallel_replica_offset>0</parallel_replica_offset>
-            <skip_unavailable_shards>0</skip_unavailable_shards>
-            <distributed_group_by_no_merge>0</distributed_group_by_no_merge>
-            <optimize_skip_unused_partitions>1</optimize_skip_unused_partitions>
-            <optimize_skip_unused_partitions_rewrite_in>1</optimize_skip_unused_partitions_rewrite_in>
-            <distributed_aggregation_memory_efficient>0</distributed_aggregation_memory_efficient>
-            <distributed_ddl_task_timeout>180</distributed_ddl_task_timeout>
             <allow_experimental_analyzer>1</allow_experimental_analyzer>
             <allow_experimental_lightweight_delete>1</allow_experimental_lightweight_delete>
             <allow_experimental_insert_into_iceberg>1</allow_experimental_insert_into_iceberg>
