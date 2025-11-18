@@ -163,6 +163,85 @@ docker exec -it mysql-server mysql -u demo_user -pdemo_password -e "USE demo_db;
 
 ---
 
+Inspect MySQL Data Before Syncing
+----------------------------------
+
+Before configuring OLake UI, you may want to inspect what data is available in MySQL. 
+
+**Quick script (recommended):**
+
+```bash
+# Run the helper script for a complete overview
+./scripts/inspect-mysql-data.sh
+```
+
+This script shows row counts, sample data, and data distribution for all tables.
+
+**Manual commands:**
+
+**Quick overview of all tables and row counts:**
+
+```bash
+docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "
+SELECT 
+    'users' as table_name, COUNT(*) as row_count FROM users
+UNION ALL
+SELECT 'products', COUNT(*) FROM products
+UNION ALL
+SELECT 'orders', COUNT(*) FROM orders
+UNION ALL
+SELECT 'user_sessions', COUNT(*) FROM user_sessions;"
+```
+
+**View sample data from each table:**
+
+```bash
+# Sample users
+docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELECT id, username, email, status, country FROM users LIMIT 5;"
+
+# Sample products
+docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELECT id, product_name, category, price, stock_quantity FROM products LIMIT 5;"
+
+# Sample orders
+docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELECT id, user_id, product_id, quantity, total_amount, status, order_date FROM orders LIMIT 5;"
+
+# Sample user sessions
+docker exec -it mysql-server mysql -u demo_user -pdemo_password demo_db -e "SELECT id, user_id, session_token, login_time, is_active FROM user_sessions LIMIT 5;"
+```
+
+**Interactive MySQL shell (for more detailed exploration):**
+
+```bash
+docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db
+```
+
+Once inside the MySQL shell, you can run queries like:
+
+```sql
+-- Show all tables
+SHOW TABLES;
+
+-- Describe table structure
+DESCRIBE users;
+DESCRIBE products;
+DESCRIBE orders;
+DESCRIBE user_sessions;
+
+-- Check data distribution
+SELECT status, COUNT(*) FROM users GROUP BY status;
+SELECT category, COUNT(*) FROM products GROUP BY category;
+SELECT status, COUNT(*) FROM orders GROUP BY status;
+
+-- View full table contents
+SELECT * FROM users;
+SELECT * FROM products;
+SELECT * FROM orders;
+```
+
+**Exit the MySQL shell:** Type `exit` or press `Ctrl+D`
+
+---
+
 Prepare ClickHouse for the Iceberg REST Catalog
 -----------------------------------------------
 

@@ -79,7 +79,13 @@ docker-compose up -d
    
    **Important:** In OLake UI, use Docker hostnames: `mysql:3306` and `minio:9000` (not localhost)
 
-2. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
-3. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
+2. **Inspect MySQL data** before syncing:
+   ```bash
+   ./scripts/inspect-mysql-data.sh
+   ```
+   Or use interactive MySQL shell: `docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db`
+
+3. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
+4. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
 
 For troubleshooting, scripts, and the full hands-on guide, jump into `BLOG_POST_COMPLETE_WALKTHROUGH.md`.
