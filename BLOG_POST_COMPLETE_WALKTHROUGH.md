@@ -289,7 +289,7 @@ Great! Your MySQL source is now registered. OLake will use the binlog to capture
    - **Warehouse**: `s3a://iceberg-warehouse/` (this is the S3 path where Iceberg tables will be stored)
    - **Metastore URI**: Leave this blank (MinIO doesn't need Hive Metastore for this demo)
 4. In the **Storage** section (this connects to MinIO):
-   - **Endpoint**: `http://minio:9000` (use Docker hostname, not `localhost`)
+   - **Endpoint**: `http://host.docker.internal:9090` (use host.docker.internal with host port 9090)
    - **Access Key**: `minioadmin`
    - **Secret Key**: `minioadmin123`
    - **Region**: `us-east-1`
