@@ -240,48 +240,30 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
 
    **Troubleshooting connection errors:**
    
-   **Error 1: `"failed to ping database: dial tcp: lookup mysql on ...: no such host"`**
+   If you see connection errors, try these steps:
    
-   This means OLake UI can't resolve the `mysql` hostname. This usually happens if:
-   - The network connection wasn't established before starting OLake UI
-   - OLake UI needs to be restarted after connecting to the network
+   1. **Verify MySQL is ready:**
+      ```bash
+      docker exec mysql-server mysqladmin -u root -proot_password ping
+      ```
    
-   **Fix:** Run these commands and try the connection test again:
-   ```bash
-   # Connect to network and restart
-   OLAKE_CONTAINER=$(docker ps --filter "name=olake-ui" --format "{{.Names}}" | head -1)
-   NETWORK_NAME=$(docker network ls --filter "name=clickhouse_lakehouse-net" --format "{{.Name}}" | head -1)
-   docker network connect $NETWORK_NAME $OLAKE_CONTAINER
-   docker restart olake-ui olake-temporal-worker
-   sleep 25  # Wait for OLake UI to be healthy
-   ```
+   2. **Test connection from olake-ui container:**
+      ```bash
+      docker exec olake-ui nc -zv mysql 3306
+      ```
+      This should show "open" if the connection works.
    
-   **Error 2: `"failed to ping database: dial tcp 172.25.0.2:3306: i/o timeout"`**
+   3. **Wait and retry:** Sometimes the first connection attempt is slow. Wait 10-15 seconds and try the connection test again in OLake UI.
    
-   This means the connection is timing out. This can happen if:
-   - MySQL is still initializing (wait a bit longer)
-   - OLake UI's connection timeout is too short
-   - Network delay on first connection
+   4. **Check OLake UI logs:**
+      ```bash
+      docker logs olake-ui --tail 50 | grep -i -E "mysql|connection|error"
+      ```
    
-   **Fix:** Try these steps:
-   ```bash
-   # 1. Verify MySQL is ready
-   docker exec mysql-server mysqladmin -u root -proot_password ping
-   
-   # 2. Test connection from olake-ui container
-   docker exec olake-ui nc -zv mysql 3306
-   
-   # 3. If connection test works, try using hostname instead of IP
-   # In OLake UI, use "mysql" as hostname (not the IP address)
-   
-   # 4. Wait 10-15 seconds and try the connection test again in OLake UI
-   # Sometimes the first connection attempt is slow
-   ```
-   
-   **If still failing:** Check OLake UI logs for more details:
-   ```bash
-   docker logs olake-ui --tail 50 | grep -i -E "mysql|connection|error"
-   ```
+   **Note:** Since all services are on the same network now, DNS resolution should work automatically. If you still see issues, make sure all containers are running:
+      ```bash
+      docker-compose ps
+      ```
 
 5. Select the tables you want to replicate:
    - ✅ `users`
