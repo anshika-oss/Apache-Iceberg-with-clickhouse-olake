@@ -98,10 +98,10 @@ Directory highlights:
 
 ---
 
-Bring Up the Core Services
---------------------------
+Bring Up All Services
+---------------------
 
-First, start the data plane services (MySQL, MinIO, ClickHouse, PostgreSQL, helper clients):
+Start all services including MySQL, MinIO, ClickHouse, and OLake UI with all its dependencies:
 
 ```bash
 docker-compose up -d
@@ -114,111 +114,43 @@ docker-compose ps
 | `minio-server` | S3-compatible storage | API `http://localhost:9090`, Console `http://localhost:9091` |
 | `clickhouse-server` | Query engine | HTTP `http://localhost:8123`, Native `localhost:19000` |
 | `clickhouse-client`, `mysql-client`, `minio-client` | Utility containers | used for scripts |
-
-**Note:** OLake UI runs as a separate stack with its own PostgreSQL, Temporal, and Elasticsearch services.
+| `olake-ui` | Data lake orchestration | Web UI `http://localhost:8000` |
+| `temporal-postgresql`, `temporal`, `temporal-elasticsearch` | OLake dependencies | Internal services for OLake |
+| `olake-temporal-worker` | OLake worker | Executes OLake workflows |
 
 ---
 
-Launch OLake UI
----------------
+OLake UI is Included
+--------------------
 
-**Important:** OLake UI is a complete, self-contained Docker Compose stack that includes:
-- OLake UI (web interface)
-- Temporal Worker (background jobs)
-- PostgreSQL (for OLake's own metadata and job state)
-- Temporal Server (workflow orchestration)
-- Temporal UI (workflow monitoring)
-- Elasticsearch (Temporal search backend)
+**Great news!** OLake UI and all its dependencies are now included in the main `docker-compose.yml` file. When you run `docker-compose up -d`, it automatically starts:
 
-According to the [OLake UI QuickStart guide](https://olake.io/docs/getting-started/quickstart/), start it with:
+- **OLake UI** (web interface at http://localhost:8000)
+- **PostgreSQL** (for OLake's metadata and job state)
+- **Temporal Server** (workflow orchestration)
+- **Elasticsearch** (Temporal search backend)
+- **OLake Temporal Worker** (executes OLake workflows)
 
-```bash
-# Start OLake UI (this creates its own network and all services)
-curl -sSL https://raw.githubusercontent.com/datazip-inc/olake-ui/master/docker-compose.yml | docker compose -f - up -d
-
-# Wait for OLake UI to be healthy
-echo "Waiting for OLake UI to start..."
-sleep 15
-```
-
-**Connect OLake UI to our network:**
-
-OLake UI runs in its own Docker network. To allow it to reach our MySQL and MinIO services, we need to connect the OLake UI container to our network. **Important:** Connect the network BEFORE OLake UI fully initializes, or restart it after connecting:
-
-```bash
-# Find the OLake UI container name
-OLAKE_CONTAINER=$(docker ps --filter "name=olake-ui" --format "{{.Names}}" | head -1)
-
-# Auto-detect our network name (based on directory name)
-NETWORK_NAME=$(docker network ls --filter "name=clickhouse_lakehouse-net" --format "{{.Name}}" | head -1)
-
-# Connect to our network
-docker network connect $NETWORK_NAME $OLAKE_CONTAINER
-echo "✓ Connected $OLAKE_CONTAINER to network $NETWORK_NAME"
-
-# Restart OLake UI to ensure it picks up the network changes
-# This is critical - OLake UI needs to restart after network connection
-docker restart olake-ui olake-temporal-worker
-echo "✓ Restarted OLake services. Wait 20-30 seconds for them to be healthy..."
-
-# Wait for services to be ready
-sleep 20
-```
-
-**Verify connectivity:**
-
-```bash
-# Check that olake-ui can resolve MySQL hostname
-docker exec olake-ui getent hosts mysql
-
-# Check that olake-ui can resolve MinIO hostname  
-docker exec olake-ui getent hosts minio
-
-# Test actual connectivity
-docker exec olake-ui ping -c 2 mysql
-docker exec olake-ui ping -c 2 minio
-```
-
-**Troubleshooting "no such host" errors:**
-
-If you still see `"failed to ping database: dial tcp: lookup mysql on 192.168.65.7:53: no such host"` in OLake UI:
-
-1. **Verify network connection:**
-   ```bash
-   # Check both containers are on the same network
-   docker network inspect ch-demo_clickhouse_lakehouse-net --format '{{range .Containers}}{{.Name}} {{end}}' | grep -E "mysql|olake"
-   ```
-
-2. **Force a complete restart:**
-   ```bash
-   # Stop OLake services
-   docker stop olake-ui olake-temporal-worker
-   
-   # Ensure network connection
-   OLAKE_CONTAINER=$(docker ps -a --filter "name=olake-ui" --format "{{.Names}}" | head -1)
-   NETWORK_NAME=$(docker network ls --filter "name=clickhouse_lakehouse-net" --format "{{.Name}}" | head -1)
-   docker network connect $NETWORK_NAME $OLAKE_CONTAINER 2>/dev/null || true
-   
-   # Start services
-   docker start olake-ui olake-temporal-worker
-   sleep 25
-   ```
-
-3. **Alternative: Use IP address temporarily** (if DNS still fails):
-   - Find MySQL IP: `docker inspect mysql-server --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'`
-   - Use that IP instead of `mysql` in OLake UI source configuration
-   - This is a workaround - DNS should work after proper restart
+All services run on the same Docker network (`clickhouse_lakehouse-net`), so there are **no network connection steps needed** - everything can communicate directly!
 
 **Access OLake UI:**
 - **URL**: http://localhost:8000
 - **Default credentials**: `admin` / `password`
 
-**Important:** When configuring sources/destinations in OLake UI, use these Docker hostnames:
+The signup process runs automatically when the containers start, so the admin user is created for you.
+
+**Important:** When configuring sources/destinations in OLake UI, use these Docker hostnames (they're all on the same network now):
 - **MySQL**: `mysql:3306` (not localhost:3307)
 - **MinIO**: `minio:9000` (not localhost:9090)
 - **MinIO Console**: `http://minio:9000` for API, `http://minio:9091` for console
 
-OLake UI manages its own PostgreSQL for job metadata, so you don't need to configure a separate database connection.
+**Note:** OLake UI may take 30-60 seconds to fully start after `docker-compose up -d` because it depends on PostgreSQL, Temporal, and Elasticsearch starting first. You can check the status with:
+
+```bash
+docker-compose ps
+```
+
+Wait until `olake-ui` shows as "healthy" before accessing the web interface.
 
 ---
 
@@ -279,9 +211,11 @@ Once the container is healthy you can jump straight into the OLake pipeline step
 Configure OLake UI: Step-by-Step Guide
 ---------------------------------------
 
-**Note:** If you haven't already connected OLake UI to the Docker network (see the "Launch OLake UI" section above), do that first. The network connection is required for OLake UI to reach MySQL and MinIO.
+OLake UI is already running and connected to the same network as MySQL and MinIO (no network setup needed!). 
 
 Now let's configure OLake UI to replicate data from MySQL to Iceberg tables in MinIO. Open your browser and navigate to `http://localhost:8000`. You'll see the OLake UI login page.
+
+**Note:** If OLake UI isn't ready yet, wait a bit longer. It depends on PostgreSQL, Temporal, and Elasticsearch starting first. Check status with `docker-compose ps` and wait until `olake-ui` shows as "healthy".
 
 **Step 1: Log in to OLake UI**
 

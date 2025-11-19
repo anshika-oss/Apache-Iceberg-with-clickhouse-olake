@@ -70,24 +70,21 @@ cd Apache-Iceberg-with-clickhouse-olake
 docker-compose up -d
 ```
 
-- Services: MySQL, MinIO, ClickHouse, helper clients
-- OLake UI runs as a separate stack (includes its own PostgreSQL, Temporal, Elasticsearch)
+- Services: MySQL, MinIO, ClickHouse, OLake UI (with PostgreSQL, Temporal, Elasticsearch), helper clients
+- All services run on the same Docker network - no network configuration needed!
 - Detailed instructions live in `BLOG_POST_COMPLETE_WALKTHROUGH.md`
 
 ## 🧭 Next Steps
 
-1. **Launch OLake UI** using the [official quickstart](https://olake.io/docs/getting-started/quickstart/):
+1. **Wait for all services to be healthy:**
    ```bash
-   # Start OLake UI (complete stack with PostgreSQL, Temporal, Elasticsearch)
-   curl -sSL https://raw.githubusercontent.com/datazip-inc/olake-ui/master/docker-compose.yml | docker compose -f - up -d
-   
-   # Connect OLake UI container to our network (auto-detects network name)
-   OLAKE_CONTAINER=$(docker ps --filter "name=olake-ui" --format "{{.Names}}" | head -1)
-   NETWORK_NAME=$(docker network ls --filter "name=clickhouse_lakehouse-net" --format "{{.Name}}" | head -1)
-   docker network connect $NETWORK_NAME $OLAKE_CONTAINER
-   echo "Connected $OLAKE_CONTAINER to network $NETWORK_NAME"
+   docker-compose ps
    ```
-   Access at `http://localhost:8000` (default: `admin` / `password`)
+   Wait until `olake-ui` shows as "healthy" (may take 30-60 seconds)
+
+2. **Access OLake UI:**
+   - URL: `http://localhost:8000`
+   - Default credentials: `admin` / `password`
    
    **Important:** In OLake UI, use Docker hostnames: `mysql:3306` and `minio:9000` (not localhost)
 
@@ -97,8 +94,8 @@ docker-compose up -d
    ```
    Or use interactive MySQL shell: `docker exec -it mysql-client mysql -h mysql -u demo_user -pdemo_password demo_db`
 
-3. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
-4. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
+4. Follow the blog to configure source/destination, run the pipeline, and query via ClickHouse
+5. Re-run `scripts/iceberg-setup.sql` + `scripts/cross-database-analytics.sql` whenever you load new data
 
 ## 📊 Sample Data
 
