@@ -115,7 +115,7 @@ services:
     environment:
       CONTAINER_REGISTRY_BASE: registry-1.docker.io
       OLAKE_SECRET_KEY: ""
-      PERSISTENT_DIR: /tmp/olake-config
+      PERSISTENT_DIR: ${PWD}/olake-data
     ports:
       - "8000:8000"
     volumes:
@@ -183,7 +183,7 @@ services:
     environment:
       CONTAINER_REGISTRY_BASE: registry-1.docker.io
       OLAKE_SECRET_KEY: ""
-      PERSISTENT_DIR: /tmp/olake-config
+      PERSISTENT_DIR: ${PWD}/olake-data
       OLAKE_CALLBACK_URL: "http://olake-ui:8000/internal/worker/callback"
     depends_on:
       temporal:
