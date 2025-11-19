@@ -113,7 +113,7 @@ docker-compose ps
 | `minio-server` | S3-compatible storage | API `http://localhost:9090`, Console `http://localhost:9091` |
 | `clickhouse-server` | Query engine | HTTP `http://localhost:8123`, Native `localhost:19000` |
 | `clickhouse-client`, `mysql-client`, `minio-client` | Utility containers | used for scripts |
-| `olake-ui` | Data lake orchestration | Web UI `http://localhost:8000` |
+| `olake-ui` | Data lake orchestration | Web UI `http://localhost:8000`, REST Catalog `http://localhost:8181` |
 | `temporal-postgresql`, `temporal`, `temporal-elasticsearch` | OLake dependencies | Internal services for OLake |
 | `olake-temporal-worker` | OLake worker | Executes OLake workflows |
 
