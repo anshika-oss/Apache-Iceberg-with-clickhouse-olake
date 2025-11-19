@@ -119,39 +119,6 @@ docker-compose ps
 
 ---
 
-OLake UI is Included
---------------------
-
-**Great news!** OLake UI and all its dependencies are now included in the main `docker-compose.yml` file. When you run `docker-compose up -d`, it automatically starts:
-
-- **OLake UI** (web interface at http://localhost:8000)
-- **PostgreSQL** (for OLake's metadata and job state)
-- **Temporal Server** (workflow orchestration)
-- **Elasticsearch** (Temporal search backend)
-- **OLake Temporal Worker** (executes OLake workflows)
-
-All services run on the same Docker network (`clickhouse_lakehouse-net`), so there are **no network connection steps needed** - everything can communicate directly!
-
-**Access OLake UI:**
-- **URL**: http://localhost:8000
-- **Default credentials**: `admin` / `password`
-
-The signup process runs automatically when the containers start, so the admin user is created for you.
-
-**Important:** When configuring sources/destinations in OLake UI, use these Docker hostnames (they're all on the same network now):
-- **MySQL**: `mysql:3306` (not localhost:3307)
-- **MinIO**: `minio:9000` (not localhost:9090)
-- **MinIO Console**: `http://minio:9000` for API, `http://minio:9091` for console
-
-**Note:** OLake UI may take 30-60 seconds to fully start after `docker-compose up -d` because it depends on PostgreSQL, Temporal, and Elasticsearch starting first. You can check the status with:
-
-```bash
-docker-compose ps
-```
-
-Wait until `olake-ui` shows as "healthy" before accessing the web interface.
-
----
 
 Seed MySQL with Demo Data
 -------------------------
@@ -252,17 +219,40 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
       ```
       This should show "open" if the connection works.
    
-   3. **Wait and retry:** Sometimes the first connection attempt is slow. Wait 10-15 seconds and try the connection test again in OLake UI.
+   3. **Test DNS resolution:**
+      ```bash
+      docker exec olake-ui getent hosts mysql
+      ```
+      This should show the MySQL container's IP address (e.g., `172.25.0.5`).
    
-   4. **Check OLake UI logs:**
+   4. **Wait and retry:** Sometimes the first connection attempt is slow. Wait 10-15 seconds and try the connection test again in OLake UI.
+   
+   5. **Check OLake UI logs:**
       ```bash
       docker logs olake-ui --tail 50 | grep -i -E "mysql|connection|error"
       ```
    
-   **Note:** Since all services are on the same network now, DNS resolution should work automatically. If you still see issues, make sure all containers are running:
-      ```bash
-      docker-compose ps
-      ```
+   6. **If you see "lookup mysql on ...: no such host" error:**
+      - The docker-compose.yml already includes DNS configuration for olake-ui
+      - Try restarting olake-ui: `docker-compose restart olake-ui`
+      - Wait 10-15 seconds and try the connection test again
+   
+   **Note:** Since all services are on the same network now, DNS resolution should work automatically. The docker-compose.yml includes explicit DNS configuration to ensure proper hostname resolution.
+
+   **Troubleshooting "bind mount path does not exist" errors:**
+   
+   If you see errors like `bind source path does not exist: /host_mnt/private/tmp/olake-config/...` when setting up sources in OLake UI:
+   
+   This is a known issue on macOS with Docker Desktop's path translation. The OLake worker creates directories correctly, but Docker Desktop translates paths differently.
+   
+   **Workaround:** Ensure Docker Desktop has file sharing enabled for your project directory:
+   1. Open Docker Desktop
+   2. Go to Settings → Resources → File Sharing
+   3. Make sure `/Users` (or your project's parent directory) is in the shared directories list
+   4. Click "Apply & Restart"
+   5. Try the source setup again in OLake UI
+   
+   **Alternative:** If the issue persists, you may need to run OLake UI in a Linux environment (not macOS) or contact OLake support for macOS-specific bind mount handling.
 
 5. Select the tables you want to replicate:
    - ✅ `users`
