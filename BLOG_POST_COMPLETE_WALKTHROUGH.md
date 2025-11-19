@@ -257,8 +257,6 @@ Perfect! Now OLake knows where to write the Iceberg tables. The destination is c
 
 **Note:** The Iceberg REST catalog service (`iceberg-rest`) is included in docker-compose.yml and runs separately from OLake UI. This REST catalog allows query engines like ClickHouse to discover and query the Iceberg tables without needing a separate Hive Metastore. The catalog doesn't require authentication by default.
 
-**Note:** OLake UI automatically provides the REST catalog service on port 8181. This REST catalog allows query engines like ClickHouse to discover and query the Iceberg tables without needing a separate Hive Metastore.
-
 **Step 4: Create and Configure the Pipeline**
 
 Now we'll create a pipeline that connects the MySQL source to the Iceberg destination. You can create either:
