@@ -233,8 +233,13 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
       ```
    
    6. **If you see "lookup mysql on ...: no such host" error:**
-      - The docker-compose.yml already includes DNS configuration for olake-ui
-      - Try restarting olake-ui: `docker-compose restart olake-ui`
+      - The docker-compose.yml includes DNS configuration and /etc/hosts entries
+      - However, OLake worker creates containers dynamically that might not inherit these settings
+      - **Workaround:** Use the MySQL container's IP address instead of hostname:
+        1. Get MySQL IP: `docker inspect mysql-server --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'`
+        2. In OLake UI, use this IP address instead of `mysql` for the Host field
+        3. For example, if IP is `172.25.0.4`, use `172.25.0.4:3306` instead of `mysql:3306`
+      - Alternatively, try restarting services: `docker-compose restart olake-ui olake-temporal-worker`
       - Wait 10-15 seconds and try the connection test again
    
    **Note:** Since all services are on the same network now, DNS resolution should work automatically. The docker-compose.yml includes explicit DNS configuration to ensure proper hostname resolution.
