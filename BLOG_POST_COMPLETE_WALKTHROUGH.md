@@ -196,8 +196,8 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
 1. In the left sidebar, click on **Sources**, then click **New Source**.
 2. Select **MySQL** as the source type.
 3. Fill in the connection details:
-   - **Host**: `mysql` (use the Docker hostname, not `localhost`)
-   - **Port**: `3306`
+   - **Host**: `host.docker.internal` (this works from dynamically created containers)
+   - **Port**: `3307` (the host port, not the container port 3306)
    - **Database**: `demo_db`
    - **Username**: `olake`
    - **Password**: `olake_pass`
@@ -234,21 +234,20 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
    
    6. **If you see "lookup mysql on ...: no such host" or "i/o timeout" errors:**
       - These errors occur because OLake worker creates containers dynamically that may not be on the same network
-      - **Solution 1:** Use the MySQL container's IP address instead of hostname:
+      - **Solution (Recommended):** Use `host.docker.internal` as the MySQL host:
+        - **Host**: `host.docker.internal` (this special DNS name works from any container, including dynamically created ones)
+        - **Port**: `3307` (use the host port, not the container port 3306)
+        - This is the standard way to access host services from containers in Docker Desktop
+        - Reference: [OLake Blog - Building Open Data Lakehouse](https://olake.io/blog/building-open-data-lakehouse-with-olake-presto/)
+      - **Alternative Solution 1:** Use the MySQL container's IP address:
         1. Get MySQL IP: `docker inspect mysql-server --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'`
         2. In OLake UI, use this IP address instead of `mysql` for the Host field
         3. For example, if IP is `172.25.0.4`, use `172.25.0.4:3306` instead of `mysql:3306`
-      - **Solution 2:** If using IP still gives "i/o timeout", the dynamically created containers are not on the same network
-        - The docker-compose.yml includes network environment variables, but OLake may not support them
-        - **Automatic workaround:** Run this script in a separate terminal to auto-connect containers:
-          ```bash
-          ./scripts/auto-connect-olake-containers.sh
-          ```
-          This script watches for OLake test containers and automatically connects them to the network.
-        - **Manual workaround:** Connect the container manually when you see the error:
-          1. When you see the connection test running, quickly run: `docker ps --filter "name=test-connection" --format "{{.Names}}" | head -1 | xargs -I {} docker network connect ch-demo_clickhouse_lakehouse-net {}`
-          2. Then retry the connection test in OLake UI
-        - This is a temporary workaround - you may need to contact OLake support for proper network configuration
+      - **Alternative Solution 2:** If using IP still gives "i/o timeout", run the auto-connect script:
+        ```bash
+        ./scripts/auto-connect-olake-containers.sh
+        ```
+        This script watches for OLake test containers and automatically connects them to the network.
       - Alternatively, try restarting services: `docker-compose restart olake-ui olake-temporal-worker`
       - Wait 10-15 seconds and try the connection test again
    
