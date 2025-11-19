@@ -232,13 +232,18 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
       docker logs olake-ui --tail 50 | grep -i -E "mysql|connection|error"
       ```
    
-   6. **If you see "lookup mysql on ...: no such host" error:**
-      - The docker-compose.yml includes DNS configuration and /etc/hosts entries
-      - However, OLake worker creates containers dynamically that might not inherit these settings
-      - **Workaround:** Use the MySQL container's IP address instead of hostname:
+   6. **If you see "lookup mysql on ...: no such host" or "i/o timeout" errors:**
+      - These errors occur because OLake worker creates containers dynamically that may not be on the same network
+      - **Solution 1:** Use the MySQL container's IP address instead of hostname:
         1. Get MySQL IP: `docker inspect mysql-server --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'`
         2. In OLake UI, use this IP address instead of `mysql` for the Host field
         3. For example, if IP is `172.25.0.4`, use `172.25.0.4:3306` instead of `mysql:3306`
+      - **Solution 2:** If using IP still gives "i/o timeout", the dynamically created containers are not on the same network
+        - The docker-compose.yml includes network environment variables, but OLake may not support them
+        - **Workaround:** Connect the dynamically created container to the network manually:
+          1. When you see the error, quickly run: `docker ps --filter "name=test-connection" --format "{{.Names}}" | head -1 | xargs -I {} docker network connect ch-demo_clickhouse_lakehouse-net {}`
+          2. Then retry the connection test in OLake UI
+        - This is a temporary workaround - you may need to contact OLake support for proper network configuration
       - Alternatively, try restarting services: `docker-compose restart olake-ui olake-temporal-worker`
       - Wait 10-15 seconds and try the connection test again
    

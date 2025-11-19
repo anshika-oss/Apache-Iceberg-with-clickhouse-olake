@@ -190,6 +190,8 @@ services:
       OLAKE_SECRET_KEY: ""
       PERSISTENT_DIR: ${PWD}/olake-data
       OLAKE_CALLBACK_URL: "http://olake-ui:8000/internal/worker/callback"
+      DOCKER_NETWORK: ch-demo_clickhouse_lakehouse-net
+      OLAKE_DOCKER_NETWORK: ch-demo_clickhouse_lakehouse-net
     dns:
       - 127.0.0.11
       - 8.8.8.8
