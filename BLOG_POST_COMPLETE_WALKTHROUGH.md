@@ -5,8 +5,7 @@ I wanted a self-contained way to show how OLake’s UI can replicate data from M
 
 You will:
 
-* Spin up MySQL, MinIO, ClickHouse, and helper clients with Docker Compose.
-* Launch **OLake UI** as a separate stack (includes PostgreSQL, Temporal, Elasticsearch) and connect it to our network.
+* Spin up all services (MySQL, MinIO, ClickHouse, OLake UI with PostgreSQL, Temporal, Elasticsearch) with a single `docker-compose up -d` command.
 * Use **OLake UI** to register a CDC-enabled MySQL source, define an Iceberg-on-MinIO destination, and activate a pipeline that writes to a `demo_lakehouse` namespace.
 * Map the Iceberg tables into ClickHouse using the Iceberg REST catalog and run analytics comparing raw Iceberg data with optimized Silver/Gold layers.
 
