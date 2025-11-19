@@ -126,6 +126,8 @@ services:
     dns:
       - 127.0.0.11
       - 8.8.8.8
+    extra_hosts:
+      - "mysql:172.25.0.4"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -188,6 +190,11 @@ services:
       OLAKE_SECRET_KEY: ""
       PERSISTENT_DIR: ${PWD}/olake-data
       OLAKE_CALLBACK_URL: "http://olake-ui:8000/internal/worker/callback"
+    dns:
+      - 127.0.0.11
+      - 8.8.8.8
+    extra_hosts:
+      - "mysql:172.25.0.4"
     depends_on:
       temporal:
         condition: service_started
