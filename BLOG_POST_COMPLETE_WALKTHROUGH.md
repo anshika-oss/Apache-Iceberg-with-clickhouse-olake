@@ -229,7 +229,7 @@ Great! Your MySQL source is now registered. OLake will use the binlog to capture
 2. Select **Apache Iceberg** as the destination type.
 3. In the **Catalog** section:
    - **Catalog**: Select `REST Catalog` (OLake provides its own REST catalog)
-   - **REST Catalog URI**: `http://host.docker.internal:8181` (OLake UI exposes the REST catalog on port 8181)
+   - **REST Catalog URI**: `http://host.docker.internal:8181/api/catalog` (OLake UI exposes the REST catalog API at this endpoint)
    - **Name of your destination**: `iceberg_destination` (or a descriptive name of your choosing)
    - **Version**: `latest`
 4. In the **Iceberg Configuration** section:
