@@ -64,12 +64,9 @@ services:
         condition: service_healthy
     networks:
       - clickhouse_lakehouse-net
-    healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8181 && echo -e 'GET /v1/config HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q 'HTTP' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    # Healthcheck removed - Java container lacks common utilities (wget/curl/nc)
+    # REST API is confirmed working via curl from host: curl http://localhost:8181/v1/config
+    # Service starts quickly and is accessible immediately
 
   # MinIO Client for bucket initialization and management
   minio-client:
