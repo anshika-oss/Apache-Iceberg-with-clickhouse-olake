@@ -117,7 +117,8 @@ services:
       OLAKE_SECRET_KEY: ""
       PERSISTENT_DIR: ${PWD}/olake-data
     ports:
-      - "8000:8000"
+      - "8000:8000"  # OLake UI web interface
+      - "8181:8181"  # OLake REST catalog API
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${PWD}/olake-data:/tmp/olake-config

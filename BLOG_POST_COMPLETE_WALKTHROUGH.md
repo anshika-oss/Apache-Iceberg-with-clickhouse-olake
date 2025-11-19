@@ -169,7 +169,14 @@ Before configuring OLake UI, you may want to inspect what data is available in M
 Prepare ClickHouse for the Iceberg REST Catalog
 -----------------------------------------------
 
-ClickHouse ships with experimental Iceberg support disabled by default. The repo already enables the necessary flags inside `clickhouse-config/config.xml` and expects an Iceberg REST catalog provided by OLake (default: `http://olake-ui:8181/api/catalog`, namespace `demo_lakehouse`, credentials `admin/password`). Update the constants in `scripts/iceberg-setup.sql` and `scripts/mysql-integration.sql` if your catalog endpoint or credentials differ.
+ClickHouse ships with experimental Iceberg support disabled by default. The repo already enables the necessary flags inside `clickhouse-config/config.xml` and expects an Iceberg REST catalog provided by OLake. 
+
+**OLake REST Catalog Details:**
+- **REST Catalog URI**: `http://olake-ui:8181/api/catalog` (from within Docker network) or `http://localhost:8181/api/catalog` (from host)
+- **Namespace**: `demo_lakehouse` (where OLake writes the raw Iceberg tables)
+- **Credentials**: `admin` / `password` (OLake UI default credentials)
+
+The REST catalog is automatically exposed by OLake UI on port 8181. Update the constants in `scripts/iceberg-setup.sql` and `scripts/mysql-integration.sql` if your catalog endpoint or credentials differ.
 
 Once the container is healthy you can jump straight into the OLake pipeline steps. 
 ---
@@ -204,70 +211,6 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
    - **Enable SSL**: Leave this unchecked (set to `false`)
 4. Click **Next** or **Test Connection** to verify the connection works.
 
-   **Troubleshooting connection errors:**
-   
-   If you see connection errors, try these steps:
-   
-   1. **Verify MySQL is ready:**
-      ```bash
-      docker exec mysql-server mysqladmin -u root -proot_password ping
-      ```
-   
-   2. **Test connection from olake-ui container:**
-      ```bash
-      docker exec olake-ui nc -zv mysql 3306
-      ```
-      This should show "open" if the connection works.
-   
-   3. **Test DNS resolution:**
-      ```bash
-      docker exec olake-ui getent hosts mysql
-      ```
-      This should show the MySQL container's IP address (e.g., `172.25.0.5`).
-   
-   4. **Wait and retry:** Sometimes the first connection attempt is slow. Wait 10-15 seconds and try the connection test again in OLake UI.
-   
-   5. **Check OLake UI logs:**
-      ```bash
-      docker logs olake-ui --tail 50 | grep -i -E "mysql|connection|error"
-      ```
-   
-   6. **If you see "lookup mysql on ...: no such host" or "i/o timeout" errors:**
-      - These errors occur because OLake worker creates containers dynamically that may not be on the same network
-      - **Solution (Recommended):** Use `host.docker.internal` as the MySQL host:
-        - **Host**: `host.docker.internal` (this special DNS name works from any container, including dynamically created ones)
-        - **Port**: `3307` (use the host port, not the container port 3306)
-        - This is the standard way to access host services from containers in Docker Desktop
-        - Reference: [OLake Blog - Building Open Data Lakehouse](https://olake.io/blog/building-open-data-lakehouse-with-olake-presto/)
-      - **Alternative Solution 1:** Use the MySQL container's IP address:
-        1. Get MySQL IP: `docker inspect mysql-server --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'`
-        2. In OLake UI, use this IP address instead of `mysql` for the Host field
-        3. For example, if IP is `172.25.0.4`, use `172.25.0.4:3306` instead of `mysql:3306`
-      - **Alternative Solution 2:** If using IP still gives "i/o timeout", run the auto-connect script:
-        ```bash
-        ./scripts/auto-connect-olake-containers.sh
-        ```
-        This script watches for OLake test containers and automatically connects them to the network.
-      - Alternatively, try restarting services: `docker-compose restart olake-ui olake-temporal-worker`
-      - Wait 10-15 seconds and try the connection test again
-   
-   **Note:** Since all services are on the same network now, DNS resolution should work automatically. The docker-compose.yml includes explicit DNS configuration to ensure proper hostname resolution.
-
-   **Troubleshooting "bind mount path does not exist" errors:**
-   
-   If you see errors like `bind source path does not exist: /host_mnt/private/tmp/olake-config/...` when setting up sources in OLake UI:
-   
-   This is a known issue on macOS with Docker Desktop's path translation. The OLake worker creates directories correctly, but Docker Desktop translates paths differently.
-   
-   **Workaround:** Ensure Docker Desktop has file sharing enabled for your project directory:
-   1. Open Docker Desktop
-   2. Go to Settings → Resources → File Sharing
-   3. Make sure `/Users` (or your project's parent directory) is in the shared directories list
-   4. Click "Apply & Restart"
-   5. Try the source setup again in OLake UI
-   
-   **Alternative:** If the issue persists, you may need to run OLake UI in a Linux environment (not macOS) or contact OLake support for macOS-specific bind mount handling.
-
 5. Select the tables you want to replicate:
    - ✅ `users`
    - ✅ `products`
@@ -280,29 +223,37 @@ Once logged in, you'll see the OLake dashboard. We need to configure two things:
 
 Great! Your MySQL source is now registered. OLake will use the binlog to capture changes in real-time.
 
-**Step 3: Register the Iceberg Destination (MinIO)**
+**Step 3: Register the Iceberg Destination (MinIO) using OLake REST Catalog**
 
 1. In the left sidebar, click on **Destinations**, then click **New Destination**.
-2. Select **Iceberg (S3/Hadoop catalog)** as the destination type.
+2. Select **Apache Iceberg** as the destination type.
 3. In the **Catalog** section:
-   - **Type**: Select `hadoop`
-   - **Warehouse**: `s3a://iceberg-warehouse/` (this is the S3 path where Iceberg tables will be stored)
-   - **Metastore URI**: Leave this blank (MinIO doesn't need Hive Metastore for this demo)
-4. In the **Storage** section (this connects to MinIO):
-   - **Endpoint**: `http://host.docker.internal:9090` (use host.docker.internal with host port 9090)
-   - **Access Key**: `minioadmin`
-   - **Secret Key**: `minioadmin123`
-   - **Region**: `us-east-1`
-   - **Bucket**: `iceberg-warehouse`
+   - **Catalog**: Select `REST Catalog` (OLake provides its own REST catalog)
+   - **REST Catalog URI**: `http://host.docker.internal:8181` (OLake UI exposes the REST catalog on port 8181)
+   - **Name of your destination**: `iceberg_destination` (or a descriptive name of your choosing)
+   - **Version**: `latest`
+4. In the **Iceberg Configuration** section:
+   - **Iceberg S3 Path (Warehouse)**: `s3://iceberg-warehouse/` (this is the S3 path where Iceberg tables will be stored)
+   - **Iceberg Database**: `demo_lakehouse` (the namespace/database where tables will be created)
+5. In the **Storage** section (this connects to MinIO):
+   - **S3 Endpoint**: `http://host.docker.internal:9090` (use host.docker.internal with host port 9090)
+   - **AWS Region**: `us-east-1`
+   - **AWS Access Key**: `minioadmin`
+   - **AWS Secret Key**: `minioadmin123`
    - **Path Style Access**: Enable this checkbox (required for MinIO)
    - **SSL**: Leave unchecked (disabled)
-5. In the **Format** section:
+6. In the **Format** section:
    - **File Format**: `Parquet`
    - **Compression**: `snappy`
-6. Enable partitioning (this will be configured per-table in the pipeline).
-7. Click **Save** or **Create Destination**.
+7. Enable partitioning (this will be configured per-table in the pipeline).
+8. Click **Save** or **Create Destination**.
 
-Perfect! Now OLake knows where to write the Iceberg tables. The destination is configured to use MinIO as an S3-compatible storage backend.
+Perfect! Now OLake knows where to write the Iceberg tables. The destination is configured to use:
+- **OLake REST Catalog** at `http://host.docker.internal:8181` for catalog metadata
+- **MinIO** at `http://host.docker.internal:9090` as the S3-compatible storage backend
+- **Namespace**: `demo_lakehouse` where all tables will be created
+
+**Note:** OLake UI automatically provides the REST catalog service on port 8181. This REST catalog allows query engines like ClickHouse to discover and query the Iceberg tables without needing a separate Hive Metastore.
 
 **Step 4: Create and Configure the Pipeline**
 
