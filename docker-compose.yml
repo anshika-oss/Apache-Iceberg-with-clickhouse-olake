@@ -120,7 +120,7 @@ services:
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - olake-config-data:/tmp/olake-config
+      - ./olake-data:/tmp/olake-config
     networks:
       - clickhouse_lakehouse-net
     depends_on:
@@ -179,7 +179,7 @@ services:
       - clickhouse_lakehouse-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - olake-config-data:/tmp/olake-config
+      - ./olake-data:/tmp/olake-config
     environment:
       CONTAINER_REGISTRY_BASE: registry-1.docker.io
       OLAKE_SECRET_KEY: ""
@@ -280,7 +280,6 @@ volumes:
   clickhouse-logs:
   temporal-postgresql-data:
   temporal-elasticsearch-data:
-  olake-config-data:
 
 
 networks:
