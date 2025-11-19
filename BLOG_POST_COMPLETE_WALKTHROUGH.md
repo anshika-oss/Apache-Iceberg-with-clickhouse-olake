@@ -113,7 +113,8 @@ docker-compose ps
 | `minio-server` | S3-compatible storage | API `http://localhost:9090`, Console `http://localhost:9091` |
 | `clickhouse-server` | Query engine | HTTP `http://localhost:8123`, Native `localhost:19000` |
 | `clickhouse-client`, `mysql-client`, `minio-client` | Utility containers | used for scripts |
-| `olake-ui` | Data lake orchestration | Web UI `http://localhost:8000`, REST Catalog `http://localhost:8181` |
+| `olake-ui` | Data lake orchestration | Web UI `http://localhost:8000` |
+| `iceberg-rest` | Iceberg REST catalog | REST API `http://localhost:8181` |
 | `temporal-postgresql`, `temporal`, `temporal-elasticsearch` | OLake dependencies | Internal services for OLake |
 | `olake-temporal-worker` | OLake worker | Executes OLake workflows |
 
@@ -171,12 +172,13 @@ Prepare ClickHouse for the Iceberg REST Catalog
 
 ClickHouse ships with experimental Iceberg support disabled by default. The repo already enables the necessary flags inside `clickhouse-config/config.xml` and expects an Iceberg REST catalog provided by OLake. 
 
-**OLake REST Catalog Details:**
-- **REST Catalog URI**: `http://olake-ui:8181/api/catalog` (from within Docker network) or `http://localhost:8181/api/catalog` (from host)
+**Iceberg REST Catalog Details:**
+- **REST Catalog URI**: `http://iceberg-rest:8181` (from within Docker network) or `http://localhost:8181` (from host)
+- **Full API endpoint**: `http://localhost:8181/v1/config` (for health checks)
 - **Namespace**: `demo_lakehouse` (where OLake writes the raw Iceberg tables)
-- **Credentials**: `admin` / `password` (OLake UI default credentials)
+- **No authentication required** (Iceberg REST catalog doesn't use auth by default)
 
-The REST catalog is automatically exposed by OLake UI on port 8181. Update the constants in `scripts/iceberg-setup.sql` and `scripts/mysql-integration.sql` if your catalog endpoint or credentials differ.
+The Iceberg REST catalog service (`iceberg-rest`) is included in docker-compose.yml and provides the REST API for Iceberg table metadata. Update the constants in `scripts/iceberg-setup.sql` and `scripts/mysql-integration.sql` if your catalog endpoint differs.
 
 Once the container is healthy you can jump straight into the OLake pipeline steps. 
 ---
@@ -229,7 +231,7 @@ Great! Your MySQL source is now registered. OLake will use the binlog to capture
 2. Select **Apache Iceberg** as the destination type.
 3. In the **Catalog** section:
    - **Catalog**: Select `REST Catalog` (OLake provides its own REST catalog)
-   - **REST Catalog URI**: `http://host.docker.internal:8181/api/catalog` (OLake UI exposes the REST catalog API at this endpoint)
+   - **REST Catalog URI**: `http://host.docker.internal:8181` (Iceberg REST catalog service endpoint)
    - **Name of your destination**: `iceberg_destination` (or a descriptive name of your choosing)
    - **Version**: `latest`
 4. In the **Iceberg Configuration** section:
@@ -249,9 +251,11 @@ Great! Your MySQL source is now registered. OLake will use the binlog to capture
 8. Click **Save** or **Create Destination**.
 
 Perfect! Now OLake knows where to write the Iceberg tables. The destination is configured to use:
-- **OLake REST Catalog** at `http://host.docker.internal:8181` for catalog metadata
+- **Iceberg REST Catalog** at `http://host.docker.internal:8181` for catalog metadata (provided by the `iceberg-rest` service)
 - **MinIO** at `http://host.docker.internal:9090` as the S3-compatible storage backend
 - **Namespace**: `demo_lakehouse` where all tables will be created
+
+**Note:** The Iceberg REST catalog service (`iceberg-rest`) is included in docker-compose.yml and runs separately from OLake UI. This REST catalog allows query engines like ClickHouse to discover and query the Iceberg tables without needing a separate Hive Metastore. The catalog doesn't require authentication by default.
 
 **Note:** OLake UI automatically provides the REST catalog service on port 8181. This REST catalog allows query engines like ClickHouse to discover and query the Iceberg tables without needing a separate Hive Metastore.
 

@@ -45,6 +45,31 @@ services:
       timeout: 20s
       retries: 3
 
+  # Iceberg REST Catalog
+  iceberg-rest:
+    image: tabulario/iceberg-rest:0.6.0
+    container_name: iceberg-rest
+    ports:
+      - "8181:8181"
+    environment:
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://iceberg-warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      CATALOG_S3_PATH_STYLE_ACCESS: true
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - clickhouse_lakehouse-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8181/v1/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # MinIO Client for bucket initialization and management
   minio-client:
     image: minio/mc:latest
@@ -85,6 +110,8 @@ services:
         condition: service_healthy
       mysql:
         condition: service_healthy
+      iceberg-rest:
+        condition: service_healthy
     networks:
       - clickhouse_lakehouse-net
     healthcheck:
@@ -118,7 +145,6 @@ services:
       PERSISTENT_DIR: ${PWD}/olake-data
     ports:
       - "8000:8000"  # OLake UI web interface
-      - "8181:8181"  # OLake REST catalog API
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${PWD}/olake-data:/tmp/olake-config
