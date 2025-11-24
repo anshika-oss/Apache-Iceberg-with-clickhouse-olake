@@ -1,26 +1,30 @@
 Building a Data Lakehouse with Apache Iceberg, ClickHouse and OLake
 =====================================================================
 
-Well, if you're looking to dive into the exciting world of modern data architecture - the lakehouse, you've come to the right place! Today we're building a complete open data lakehouse from scratch using MySQL, OLake, ClickHouse and MinIO. And the best part? We'll have it running on your local machine in just a few steps.
+If you’re serious about building a modern data architecture, you’ll love this one. We’ll put together a fully open-source lakehouse platform using Apache Iceberg, ClickHouse, OLake and MinIO — and you can spin it up on your laptop using Docker in a few steps.
 
-Now, you might be wondering, "What exactly is a data lakehouse?"
+### What is a data lakehouse?
 
-Well, it's essentially the best of both worlds - combining the flexibility and scale of data lakes with the performance and structure of data warehouses. Think of it as your data's new favorite hangout spot where it can be both raw and refined, depending on what you need.
+In short: it blends the flexibility of a data lake (large-scale object storage, schema-on-read) with the structure and performance of a data warehouse (transactions, fast queries, governance). With Iceberg as the table format, you get ACID semantics, schema evolution and time-travel out of the box. That means you can treat your object storage like a first-class table store, not just a dump of files.
 
-What makes this architecture particularly elegant is how these components communicate through Apache Iceberg table format, ensuring we get ACID transactions, schema evolution, and time travel capabilities right out of the box.
+### Why this architecture matters
 
-I wanted a self-contained way to show how OLake's UI can replicate data from MySQL into Apache Iceberg tables stored in MinIO and how ClickHouse can immediately query those tables through the Iceberg table engine. This walkthrough documents every step and references the configs/scripts bundled in this repo so that you can reproduce the pipeline on any laptop with Docker.
+Here’s the architecture we’ll build:
 
-**How is the data flowing?**
+- **Source**: MySQL – the operational database  
+- **Ingestion**: OLake UI captures CDC (change-data-capture) from MySQL and writes into Iceberg tables stored in MinIO  
+- **Storage**: MinIO serves as the S3-compatible object storage for both raw and curated Iceberg tables  
+- **Metadata**: Iceberg REST catalog (e.g., via PostgreSQL) tracks snapshots, schemas and manifests  
+- **Query engine**: ClickHouse connects to the Iceberg REST catalog (via its DataLakeCatalog/Iceberg engine), enabling real-time analytics on data sitting in object storage  
 
-Here's where things get really interesting. Unlike traditional ETL pipelines that require complex Kafka, Debezium setups or batch processing windows, our architecture provides data replication without them. OLake captures changes from MySQL using Change Data Capture (CDC) and streams them directly into Iceberg tables stored in MinIO. Then ClickHouse can query this data instantly with sub-second latency.
+This architecture lets you move data from MySQL → Iceberg (raw) → queryable immediately in ClickHouse — without heavy ETL stacks, Kafka or massive orchestration overhead.
 
-You will:
+### What we’ll do
 
-* Set up **OLake UI** separately in its own directory (this is your control center for managing data pipelines).
-* Spin up the core services (MySQL, MinIO, ClickHouse, Iceberg REST Catalog) with a single `docker-compose up -d` command.
-* Use **OLake UI** to register a CDC-enabled MySQL source, define an Iceberg-on-MinIO destination, and activate a pipeline (e.g., named `iceberg_job`) that writes to a namespace like `iceberg_job_demo_db`.
-* Map the Iceberg tables into ClickHouse using the Iceberg REST catalog and run analytics comparing raw Iceberg data with optimized Silver/Gold layers.
+- Set up OLake UI (as your orchestration hub for CDC pipelines)  
+- Launch the core services: MySQL, MinIO, Iceberg REST catalog, ClickHouse — all via a single `docker-compose up -d` command  
+- In OLake UI: define a MySQL source (with CDC enabled), select MinIO/Iceberg as the destination, and activate a job (for example named `iceberg_job`) which will write into a namespace like `iceberg_job_demo_db` on MinIO  
+- **Map the Iceberg tables into ClickHouse using the Iceberg REST catalog and run analytics comparing raw Iceberg data with optimized Silver/Gold layers.**
 
 ---
 
