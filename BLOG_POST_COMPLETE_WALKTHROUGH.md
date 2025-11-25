@@ -22,7 +22,7 @@ This architecture lets you move data from MySQL → Iceberg (raw) → queryable 
 ### What we’ll do
 
 - Set up OLake UI (as your orchestration hub for CDC pipelines)  
-- Launch the core services: MySQL, MinIO, Iceberg REST catalog, ClickHouse — all via a single `docker-compose up -d` command  
+- Launch the core services: MySQL, MinIO, Iceberg REST catalog, ClickHouse — all via a single `docker compose up -d` command  
 - In OLake UI: define a MySQL source (with CDC enabled), select MinIO/Iceberg as the destination, and activate a job (for example named `iceberg_job`) which will write into a namespace like `iceberg_job_demo_db` on MinIO  
 - **Map the Iceberg tables into ClickHouse using the Iceberg REST catalog and run analytics comparing raw Iceberg data with optimized Silver/Gold layers.**
 
@@ -170,8 +170,8 @@ Bring Up the Core Services
 Start the core services (MySQL, MinIO, ClickHouse, and Iceberg REST Catalog). **Note:** OLake UI is already running separately from the previous step.
 
 ```bash
-docker-compose up -d
-docker-compose ps
+docker compose up -d
+docker compose ps
 ```
 
 **What to expect:**
